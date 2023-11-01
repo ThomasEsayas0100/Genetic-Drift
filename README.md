@@ -106,7 +106,7 @@ This route, accessible via GET requests to the root URL, serves as the entry poi
 <html>
 <head>
     <style>
-      // Body and Slider styling
+      /* Body and Slider styling */
     </style>
 </head>
 <body>
