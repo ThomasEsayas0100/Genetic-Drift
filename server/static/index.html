@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+          display: flex;
+          font-family: Arial, sans-serif;
+          font-size: 18px;
+        }
+        #sliders {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+      </style>
+     
+</head>
+<body>
+      <div id="graph"></div>
+      
+      <!-- Sliders -->
+      <div id="sliders" style="margin:10px">
+        <!-- Starting Allele Frequency Slider -->
+        <label for="p0">Starting Allele Frequency of p: <span id="p0Value">0.5</span></label>
+        <input type="range" id="p0" name="p0" min="0" max="1" step="0.01" oninput="updateSliderValue('p0', 'p0Value')">
+        <br>
+      
+        <!-- Population Size Slider -->
+        <label for="Ne">Population Size: <span id="NeValue">10</span></label>
+        <input type="range" id="Ne" name="Ne" min="1" max="500" value="100" step="1" oninput="updateSliderValue('Ne', 'NeValue')">
+        <br>
+      
+        <!-- Number of Simulations Slider -->
+        <label for="nrep">Number of Simulations: <span id="nrepValue">3</span></label>
+        <input type="range" id="nrep" name="nrep" min="1" max="5" step="1" oninput="updateSliderValue('nrep', 'nrepValue')">
+        <br>
+      
+        <!-- Generations Slider -->
+        <label for="time">Generations: <span id="timeValue">50</span></label>
+        <input type="range" id="time" name="time" min="1" max="100" step="1" oninput="updateSliderValue('time', 'timeValue')">
+        <br>
+      
+        <!-- Show Select -->
+        <label for="show">Show:</label>
+        <select id="show" name="show">
+          <option value="">Select an Option</option>
+          <option value="p">p</option>
+          <option value="genotypes">genotypes</option>
+        </select>
+      
+        <!-- Separator -->
+        <hr style="border: none; border-top: 3px solid black;"> 
+
+        <!-- Filters Section -->
+        <h2>Filters</h2>
+        <div style="display: inline-block;">
+          <!-- From Generation Filter -->
+          <label for="fromGeneration">From:</label>
+          <input type="number" id="fromGeneration" name="fromGeneration" min="1" max="100" value="1">
+        
+          <!-- To Generation Filter -->
+          <label for="toGeneration">To:</label>
+          <input type="number" id="toGeneration" name="toGeneration" min="1" max="100" value="100">
+        </div>
+        <br>
+        
+        <!-- Replication Filter -->
+        <label for="replicationSlider">Replication: <span id="replicationSliderValue">All</span></label>
+        <div style="display: inline-block;">
+          <!-- Checkbox for enabling/disabling Replication Filter -->
+          <input type="checkbox" id="checkbox" onchange="updateSliderValue('replicationSlider', 'replicationSliderValue')">
+        
+          <!-- Slider for selecting Replication value -->
+          <input type="range" id="replicationSlider" name="replicationSlider" min="1" max="3" value="3" step="1" oninput="updateSliderValue('replicationSlider', 'replicationSliderValue')" disabled>
+        </div>
+        
+    
+      <script>
+        /**
+         * Add event listener to the checkbox
+         */
+        const checkboxRepFilter = document.getElementById('checkbox');
+        const sliderRepFilter = document.getElementById('replicationSlider');
+        checkboxRepFilter.addEventListener('input', () => {
+          sliderRepFilter.disabled = !checkboxRepFilter.checked;
+          updateGraph();
+        });
+
+        const sliderNrep = document.getElementById('nrep');
+        document.getElementById('nrep').addEventListener('input', () => {
+          sliderRepFilter.max = document.getElementById('nrep').value;
+          sliderRepFilter.value = sliderRepFilter.max;
+        });
+      
+        /**
+         * Update the slider value and corresponding text content
+         * @param {string} sliderId - The id of the slider element
+         * @param {string} valueId - The id of the value element
+         */
+        function updateSliderValue(sliderId, valueId) {
+          const sliderRepFilter = document.getElementById('replicationSlider');
+          const slider = document.getElementById(sliderId);
+          const value = document.getElementById(valueId);
+      
+          // Update the value based on the sliderId
+          if (sliderId === 'Ne') {
+            value.textContent = parseInt(10 ** (slider.value/100)); // Scale up slider value for large populations
+          } else {
+            value.textContent = slider.value;
+          }
+      
+          // Reset the slider and value if checkboxRepFilter is unchecked
+          if (checkboxRepFilter.checked === false) {
+            document.getElementById('replicationSliderValue').textContent = "All";
+          }
+      
+          // Update the maximum value of sliderRepFilter if sliderId is "nrep"
+          if (sliderId === "nrep") {
+            sliderRepFilter.max = slider.value;
+          }
+        }
+      </script>
+      
+    <script>
+        const sliderP0 = document.getElementById('p0');
+        const sliderNe = document.getElementById('Ne');
+        const sliderTime = document.getElementById('time');
+        const timeFilterStart = document.getElementById('fromGeneration');
+        const timeFilterEnd = document.getElementById('toGeneration');
+        const selectShow = document.getElementById('show');
+        const graphDiv = document.getElementById('graph');
+
+/**
+ * Sends slider values to the backend and updates the graph div with the returned plot HTML.
+ */
+const updateGraph = () => {
+    // Get slider elements
+    const sliderP0 = document.getElementById('p0');
+    const sliderNe = document.getElementById('Ne');
+    const sliderNrep = document.getElementById('nrep');
+    const sliderTime = document.getElementById('time');
+    const timeFilterStart = document.getElementById('fromGeneration');
+    const timeFilterEnd = document.getElementById('toGeneration');
+    const sliderRepFilter = document.getElementById('replicationSlider');
+    const checkboxRepFilter = document.getElementById('checkbox');
+    const selectShow = document.getElementById('show');
+    const graphDiv = document.getElementById('graph');
+    var repFilter = sliderRepFilter.value;
+
+    // Set repFilter to -1 if checkbox is not checked
+    if (checkboxRepFilter.checked === false) {
+      repFilter = -1;
+    }
+     
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/process_data", true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+
+    /**
+     * Function to send data to the backend
+     */
+    const sendData = () => {
+        xhr.open("POST", "/process_data", true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.send(JSON.stringify({
+            p0: sliderP0.value,
+            Ne: parseInt(10 ** (sliderNe.value/100)),
+            nrep: sliderNrep.value,
+            time: sliderTime.value,
+            show: selectShow.value,
+            time_filter_start: timeFilterStart.value,
+            time_filter_end: timeFilterEnd.value,
+            rep_filter: repFilter
+        }));
+    };
+
+    sendData();
+
+    // Listen for load event
+    xhr.addEventListener("load", () => {
+        if (xhr.status === 200) {
+            const data = JSON.parse(xhr.responseText);
+            const iframe = document.createElement("iframe");
+            iframe.setAttribute("srcdoc", data.plot_html);
+
+            // Set iframe width and height based on selectShow value
+            if (selectShow.value === "genotypes") {
+                iframe.setAttribute("width", "800px");
+                iframe.setAttribute("height", "600px");
+            } else {
+                iframe.setAttribute("width", "1050px");
+                iframe.setAttribute("height", "550px");
+            }
+
+            // Clear graphDiv and append the iframe
+            graphDiv.innerHTML = "";
+            graphDiv.appendChild(iframe);
+        } else {
+            console.error("Error:", xhr.statusText);
+        }
+    });
+
+    // Listen for error event
+    xhr.addEventListener("error", () => {
+        console.error("Request failed");
+    });
+};
+        
+        // Add event listeners to all input elements
+        sliderP0.addEventListener('mouseup', updateGraph);
+        sliderNe.addEventListener('mouseup', updateGraph);
+        sliderNrep.addEventListener('mouseup', updateGraph);
+        sliderTime.addEventListener('mouseup', updateGraph);
+        timeFilterStart.addEventListener('input', updateGraph);
+        timeFilterEnd.addEventListener('input', updateGraph);
+        sliderRepFilter.addEventListener('mouseup', updateGraph);
+        selectShow.addEventListener('change', updateGraph);
+    </script>
+</body>
+
+</html>
